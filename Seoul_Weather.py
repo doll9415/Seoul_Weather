@@ -1,70 +1,33 @@
-from flask import Flask, render_template_string
+import streamlit as st
 import requests
 from datetime import datetime
 
-app = Flask(__name__)
+# 제목
+st.title("🌤 서울의 날씨정보")
 
-@app.route('/')
-def weather():
-    # 서울의 위도, 경도
-    lat, lon = 37.5665, 126.9780
+# 서울의 위도, 경도
+lat, lon = 37.5665, 126.9780
+st.write(f"📍 위치: 위도 {lat}, 경도 {lon}")
 
-    # Open-Meteo API URL
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul"
+# Open-Meteo API 요청
+url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul"
+response = requests.get(url)
+data = response.json()
 
-    # API 요청
-    response = requests.get(url)
-    data = response.json()
+# 데이터 파싱
+dates = data['daily']['time']
+max_temps = data['daily']['temperature_2m_max']
+min_temps = data['daily']['temperature_2m_min']
 
-    # 데이터 추출
-    dates = data['daily']['time']
-    max_temps = data['daily']['temperature_2m_max']
-    min_temps = data['daily']['temperature_2m_min']
+# 요일 이름
+weekdays = [datetime.strptime(d, "%Y-%m-%d").strftime("%a") for d in dates]
 
-    # 날짜를 요일 이름으로 변환
-    weekdays = [datetime.strptime(d, "%Y-%m-%d").strftime("%a") for d in dates]
-
-    # HTML 템플릿
-    html = """
-    <!DOCTYPE html>
-    <html lang="ko">
-    <head>
-        <meta charset="UTF-8">
-        <title>서울의 날씨정보</title>
-        <style>
-            body { font-family: Arial, sans-serif; text-align: center; background: #f2f2f2; }
-            h1 { color: #333; }
-            table { margin: auto; border-collapse: collapse; width: 60%; background: white; }
-            th, td { border: 1px solid #ccc; padding: 10px; }
-            th { background: #007bff; color: white; }
-            tr:nth-child(even) { background: #f9f9f9; }
-        </style>
-    </head>
-    <body>
-        <h1>서울의 날씨정보</h1>
-        <h3>위치: 위도 {{ lat }}, 경도 {{ lon }}</h3>
-        <table>
-            <tr>
-                <th>요일</th>
-                <th>날짜</th>
-                <th>최고기온 (°C)</th>
-                <th>최저기온 (°C)</th>
-            </tr>
-            {% for day, date, tmax, tmin in rows %}
-            <tr>
-                <td>{{ day }}</td>
-                <td>{{ date }}</td>
-                <td>{{ tmax }}</td>
-                <td>{{ tmin }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-    </body>
-    </html>
-    """
-
-    rows = zip(weekdays, dates, max_temps, min_temps)
-    return render_template_string(html, lat=lat, lon=lon, rows=rows)
-
-if __name__ == '__main__':
-    app.run(debug=True)
+# 표 만들기
+st.subheader("🗓️ 요일별 최고/최저 기온")
+weather_table = {
+    "요일": weekdays,
+    "날짜": dates,
+    "최고기온 (°C)": max_temps,
+    "최저기온 (°C)": min_temps
+}
+st.table(weather_table)
